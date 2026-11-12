@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>一Take保 AI — 香港保險牌照（IIQE）刷題教練</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0F172A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="一Take保 AI">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --navy: #0F172A;
+    --green: #10B981;
+    --amber: #D97706;
+    --light: #F8FAFC;
+  }
+  body { background: #0F172A; color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif; }
+  .app-container { max-width: 430px; margin: 0 auto; min-height: 100vh; background: #0F172A; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+  .tab-content { display: none; padding-bottom: 90px; }
+  .tab-content.active { display: block; }
+  .progress-bar { height: 8px; background: #1E293B; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #10B981, #059669); transition: width 0.3s; }
+  .option-btn { transition: all 0.2s; border: 2px solid #334155; }
+  .option-btn:hover { border-color: #64748B; }
+  .option-btn.correct { background: #10B98122; border-color: #10B981; color: #10B981; }
+  .option-btn.wrong { background: #EF444422; border-color: #EF4444; color: #EF4444; }
+  .card { background: #1E293B; border-radius: 16px; }
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #1E293B; border-top: 1px solid #334155; display: flex; justify-content: space-around; padding: 8px 0 12px; z-index: 100; }
+  .nav-item { flex: 1; text-align: center; padding: 6px 4px; font-size: 11px; color: #94A3B8; cursor: pointer; transition: color 0.2s; }
+  .nav-item.active { color: #10B981; }
+  .nav-item svg { width: 24px; height: 24px; margin: 0 auto 2px; }
+  .timer { font-variant-numeric: tabular-nums; font-weight: 600; color: #D97706; }
+  .pro-badge { background: linear-gradient(90deg, #D97706, #F59E0B); color: #0F172A; font-weight: 700; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+  .free-badge { background: #334155; color: #94A3B8; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+  .expand-card { cursor: pointer; }
+  .expand-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .expand-card.open .expand-content { max-height: 500px; }
+  .chat-box { background: #0F172A; border: 1px solid #334155; border-radius: 12px; padding: 12px; margin-top: 8px; }
+  .quick-btn { background: #1E293B; border: 1px solid #475569; border-radius: 8px; padding: 8px 12px; font-size: 13px; cursor: pointer; margin: 4px; }
+  .quick-btn:hover { background: #334155; }
+  .ai-reply { background: #10B98115; border-left: 3px solid #10B981; padding: 8px 12px; border-radius: 0 8px 8px 0; margin-top: 8px; font-size: 14px; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .modal-content { background: #1E293B; border-radius: 20px; padding: 24px; max-width: 340px; text-align: center; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-[#0F172A]/95 backdrop-blur border-b border-[#1E293B] px-4 py-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center font-bold text-[#0F172A]">一</div>
+        <span class="font-bold text-lg">一Take保 AI</span>
+      </div>
+      <div id="proStatus" class="free-badge">免費版</div>
+    </div>
+    <div class="mt-2 flex items-center justify-between text-sm">
+      <div class="flex gap-2">
+        <span class="px-3 py-1 bg-[#1E293B] rounded-full text-[#10B981] font-medium">卷一：保險原理及實務</span>
+      </div>
+      <div class="timer" id="timerDisplay">02:00:00</div>
+    </div>
+  </header>
+
+  <!-- Tab: 極速刷題 -->
+  <div id="tab-practice" class="tab-content active px-4 pt-4">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm text-slate-400">練習進度</div>
+      <div class="text-sm font-medium" id="progressText">第 1 / 15 題</div>
+    </div>
+    <div class="progress-bar mb-4">
+      <div class="progress-fill" id="progressFill" style="width: 6.66%"></div>
+    </div>
+    <div class="card p-4 mb-4" id="questionCard">
+      <div class="text-xs text-slate-400 mb-2" id="chapterTag">最高誠信原則</div>
+      <div class="text-base font-medium leading-relaxed mb-4" id="questionText">載入中...</div>
+      <div id="optionsContainer" class="space-y-2"></div>
+    </div>
+    <div id="explanationCard" class="card p-4 mb-4 hidden">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-[#10B981] font-bold">AI 保險導師廣東話拆解</span>
+      </div>
+      <div class="text-sm leading-relaxed mb-3" id="explanationText"></div>
+      <div class="bg-[#10B98115] rounded-lg p-3 mb-2">
+        <div class="text-xs text-[#10B981] font-bold mb-1">秒記口訣</div>
+        <div class="text-sm" id="mnemonicText"></div>
+      </div>
+      <div class="bg-[#D9770615] rounded-lg p-3">
+        <div class="text-xs text-[#D97706] font-bold mb-1">考官最愛陰你嘅文字陷阱</div>
+        <div class="text-sm" id="trapText"></div>
+      </div>
+    </div>
+    <div id="aiFollowup" class="hidden">
+      <button id="askAiBtn" class="w-full py-3 bg-[#1E293B] border border-[#334155] rounded-xl text-[#10B981] font-medium flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        追問 AI 導師
+      </button>
+      <div id="chatContainer" class="chat-box hidden mt-3">
+        <div class="text-xs text-slate-400 mb-2">AI 導師：有咩想問？揀下面或者自己諗下</div>
+        <div class="flex flex-wrap">
+          <button class="quick-btn" onclick="handleQuickAsk(0)">用日常例子解釋呢條原則？</button>
+          <button class="quick-btn" onclick="handleQuickAsk(1)">俾多一題類似文字陷阱題我試下</button>
+        </div>
+        <div id="aiResponseArea"></div>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-4">
+      <button id="prevBtn" class="flex-1 py-3 bg-[#1E293B] rounded-xl font-medium" onclick="prevQuestion()">上一題</button>
+      <button id="nextBtn" class="flex-1 py-3 bg-[#10B981] text-[#0F172A] rounded-xl font-bold" onclick="nextQuestion()">下一題</button>
+    </div>
+    <div class="text-center mt-4 text-xs text-slate-500">答錯嘅題會自動加入「錯題救星」</div>
+  </div>
+
+  <!-- Tab: 必背法例天書 -->
+  <div id="tab-bible" class="tab-content px-4 pt-4">
+    <h2 class="text-xl font-bold mb-4">必背法例天書</h2>
+    <p class="text-sm text-slate-400 mb-4">IIQE 卷一最常考 6 大核心原則，廣東話精髓 + 中伏位</p>
+    <div id="bibleCards" class="space-y-3"></div>
+  </div>
+
+  <!-- Tab: 錯題救星 -->
+  <div id="tab-wrong" class="tab-content px-4 pt-4">
+    <h2 class="text-xl font-bold mb-2">錯題救星</h2>
+    <div id="wrongSummary" class="card p-4 mb-4">
+      <div class="text-3xl font-bold text-[#EF4444]" id="wrongCount">0</div>
+      <div class="text-sm text-slate-400">條錯題待重練</div>
+      <div class="mt-2 text-sm" id="weakAnalysis">暫時未有錯題，加油！</div>
+    </div>
+    <button id="retryWrongBtn" class="w-full py-3 bg-[#D97706] text-[#0F172A] rounded-xl font-bold mb-4 hidden" onclick="startRetryWrong()">一鍵重練錯題</button>
+    <div id="wrongList" class="space-y-3"></div>
+    <div id="noWrong" class="text-center text-slate-500 py-10">暫時未有錯題，去「極速刷題」練下啦！</div>
+  </div>
+
+  <!-- Tab: PRO -->
+  <div id="tab-pro" class="tab-content px-4 pt-4">
+    <div class="text-center mb-6">
+      <div class="inline-block pro-badge text-base px-4 py-1 mb-2">30日通關包</div>
+      <h2 class="text-2xl font-bold">升級 PRO 一次過過關</h2>
+      <p class="text-sm text-slate-400 mt-1">免費版每日限練 15 題、3 次 AI 追問</p>
+    </div>
+    <div class="space-y-4 mb-6">
+      <div class="card p-4 border-2 border-transparent">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-lg">單科 30 日衝刺包</div>
+            <div class="text-2xl font-bold text-[#10B981] mt-1">HK$98</div>
+            <div class="text-xs text-slate-400">一次性收費，無需訂閱</div>
+          </div>
+          <div class="text-xs bg-[#1E293B] px-2 py-1 rounded">卷一專用</div>
+        </div>
+      </div>
+      <div class="card p-4 border-2 border-[#D97706] relative">
+        <div class="absolute -top-3 right-4 bg-[#D97706] text-[#0F172A] text-xs font-bold px-2 py-0.5 rounded-full">最受歡迎</div>
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-lg">卷一＋卷三雙科全包</div>
+            <div class="text-2xl font-bold text-[#D97706] mt-1">HK$158</div>
+            <div class="text-xs text-slate-400">慳更多，一次過齊</div>
+          </div>
+          <div class="text-xs bg-[#D9770622] text-[#D97706] px-2 py-1 rounded">優惠價</div>
+        </div>
+      </div>
+    </div>
+    <div class="card p-4 mb-6">
+      <div class="font-bold mb-3 text-[#10B981]">PRO 專屬特權</div>
+      <ul class="space-y-2 text-sm">
+        <li class="flex items-start gap-2"><span class="text-[#10B981]">✓</span> 解鎖全部 800+ 條精選高仿真題庫</li>
+        <li class="flex items-start gap-2"><span class="text-[#10B981]">✓</span> 無限次廣東話 AI 導師追問</li>
+        <li class="flex items-start gap-2"><span class="text-[#10B981]">✓</span> 考前 100 大高頻文字陷阱特訓</li>
+        <li class="flex items-start gap-2"><span class="text-[#10B981]">✓</span> 無限次全真模擬試卷（2小時計時）</li>
+        <li class="flex items-start gap-2"><span class="text-[#10B981]">✓</span> 錯題智能分析 + 弱項加強</li>
+      </ul>
+    </div>
+    <button onclick="unlockPro()" class="w-full py-4 bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-[#0F172A] rounded-xl font-bold text-lg shadow-lg">
+      立即解鎖 PRO（模擬體驗）
+    </button>
+    <p class="text-center text-xs text-slate-500 mt-3">此為演示版本，點擊即模擬付款成功</p>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('practice')" data-tab="practice">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      極速刷題
+    </div>
+    <div class="nav-item" onclick="switchTab('bible')" data-tab="bible">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      法例天書
+    </div>
+    <div class="nav-item" onclick="switchTab('wrong')" data-tab="wrong">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      錯題救星
+    </div>
+    <div class="nav-item" onclick="switchTab('pro')" data-tab="pro">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+      PRO
+    </div>
+  </nav>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-[#10B98122] flex items-center justify-center">
+      <svg class="w-8 h-8 text-[#10B981]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <h3 class="text-xl font-bold mb-2">解鎖成功！</h3>
+    <p class="text-sm text-slate-300 mb-4">你已成為 PRO 尊貴會員<br>全部功能已開放</p>
+    <button onclick="closeModal()" class="w-full py-3 bg-[#10B981] text-[#0F172A] rounded-xl font-bold">開始刷題</button>
+  </div>
+</div>
+
+<script>
+// ============ Data ============
+const questions = [
+  {
+    id: 1,
+    chapter: "最高誠信原則",
+    question: "根據最高誠信原則（Utmost Good Faith），投保人在投保時必須：",
+    options: [
+      "只需要如實回答投保書上的問題即可",
+      "主動披露所有會影響審慎保險人決定是否承保或釐定保費的重要事實",
+      "只披露法律上規定必須披露的事實",
+      "等保險人明確詢問後才需要披露"
+    ],
+    correct: 1,
+    explanation: "最高誠信就係要你「主動講晒」，唔係等保險公司問先講。好似你買車險唔講自己有超速紀錄，之後出車禍保險公司就有權由頭取消保單。",
+    mnemonic: "主動披露，唔等問！重要事實要自己講。",
+    trap: "陷阱：題目成日用「必須 vs 可以」。最高誠信係「必須」主動披露，唔係「可以」。普通合約先係問先答。",
+    followup: [
+      "想像你買屋企保險，你知屋企有漏水問題但投保書冇問，你要唔要講？要！因為會影響保險公司決定承唔承保同保費幾多。",
+      "變形題：投保人漏報咗一個重要事實，但係保險公司後來都賠咗一單。之後保險公司發現，可以點？可以由頭取消成份合約，之前賠過嘅都可能要追返。"
+    ]
+  },
+  {
+    id: 2,
+    chapter: "可保權益",
+    question: "關於可保權益（Insurable Interest），以下哪項描述正確？",
+    options: [
+      "可保權益必須在投保時及索償時都存在（適用於所有保單）",
+      "人壽保險的可保權益只需在投保時存在即可",
+      "盜賊對其管有的贓物有可保權益",
+      "任何有財務關係的人都有可保權益"
+    ],
+    correct: 1,
+    explanation: "人壽保險特別啲：你只要投保嗰陣對條命有可保權益就得（例如自己、配偶、有債務關係），之後就算關係變咗都仲可以索。財產保險就兩頭都要有。",
+    mnemonic: "人壽：投保有就得。財產：兩頭都要有。",
+    trap: "陷阱：唔好以為所有保單都一樣。人壽 vs 一般保險（財產）嘅可保權益時間要求完全唔同！",
+    followup: [
+      "日常例子：你幫老婆買咗人壽，之後離婚。只要投保嗰陣係合法配偶，之後仲可以索死亡賠償。但你唔可以幫一個陌生人買人壽。",
+      "變形題：債權人可以就債務人的生命購買保險，但唔可以就債務人的汽車購買保險，除非該汽車已按揭給他。點解？因為可保權益必須是法律認可嘅關係，唔係單有錢銀關係就得。"
+    ]
+  },
+  {
+    id: 3,
+    chapter: "近因原則",
+    question: "近因原則（Proximate Cause）中，「近因」是指：",
+    options: [
+      "時間上最後發生的事件",
+      "導致損失的主導、有效及具支配性的原因",
+      "最先發生的事件",
+      "任何同時發生的原因"
+    ],
+    correct: 1,
+    explanation: "近因唔係「最後發生」嗰件事，而係「主導成個損失」嘅原因。好似火災引起爆炸，再引起水損，近因可能係火災（如果火災係受保危險）。",
+    mnemonic: "近因＝主導原因，唔係時間最後。",
+    trap: "陷阱：考官最愛問「最後發生」係咪近因？答案係唔一定！要睇邊個係有效主導原因。",
+    followup: [
+      "例子：船隻先撞冰山（除外），之後漏水沉沒。近因係撞冰山，唔係最後嘅沉沒。如果保單除外「冰山」，就唔賠。",
+      "變形題：一場火災（受保）引起煙燻損失，再引起暴雨造成水損。如果近因係火災，水損都可能獲賠。關鍵係因果鏈有冇中斷。"
+    ]
+  },
+  {
+    id: 4,
+    chapter: "彌償原則",
+    question: "以下哪類保險通常不適用彌償原則（Indemnity）？",
+    options: [
+      "汽車保險",
+      "家居保險",
+      "人壽保險",
+      "貨物運輸保險"
+    ],
+    correct: 2,
+    explanation: "彌償就係「賠多少損失就賠多少，唔可以賺到」。人壽保險條命無價，所以係「定額給付」，唔係彌償。財產保險先係彌償。",
+    mnemonic: "人壽＝定額。財產＝彌償（賠實際損失）。",
+    trap: "陷阱：「所有保單 vs 彌償保單」。唔好以為所有保險都係彌償。人壽同個人意外好多時係定額。",
+    followup: [
+      "例子：你部車撞爛，保險賠修理費（實際損失），唔會賠多過車價。但人壽保100萬，死咗就賠100萬，唔會計你「值幾多錢」。",
+      "變形題：醫療費用保險通常屬彌償（賠實際醫療開支），除非保單寫明係定額。呢個係高頻混淆點。"
+    ]
+  },
+  {
+    id: 5,
+    chapter: "代位權",
+    question: "保險人行使代位權（Subrogation）的前提是：",
+    options: [
+      "只要發生損失就可以行使",
+      "保險人已向被保險人作出彌償後，才可以向有責任的第三者追償",
+      "必須在索償前通知被保險人",
+      "只適用於人壽保險"
+    ],
+    correct: 1,
+    explanation: "代位權就係保險公司賠咗你之後，可以「代替你」去追那個搞出事的人。目的係防止你雙重獲利。所以一定要先賠咗你先有權追。",
+    mnemonic: "先賠後追。彌償完先有代位。",
+    trap: "陷阱：代位權唔適用於人壽保險（因為人壽唔係彌償）。考官成日陰你問人壽有冇代位。",
+    followup: [
+      "例子：你部車被人撞，保險公司賠咗你修理費。之後保險公司可以去追那個肇事司機。你唔可以再自己追一次。",
+      "變形題：如果被保險人自己已經向第三者追到賠償，保險公司只需要補回差額，唔會全額再賠。呢個就係防止超額彌償。"
+    ]
+  },
+  {
+    id: 6,
+    chapter: "分擔原則",
+    question: "分擔原則（Contribution）適用於什麼情況？",
+    options: [
+      "只有一份保單時",
+      "同一損失有多於一份有效保單保障時，各保險人按比例分擔",
+      "人壽保險有多份保單時",
+      "保險人與被保險人之間的爭議"
+    ],
+    correct: 1,
+    explanation: "如果你同一樣嘢買咗兩份保險，出事先，兩間保險公司會按比例分擔，唔會兩間都全額賠你（否則你會賺到）。",
+    mnemonic: "多份保單，按比例分擔，防止雙重獲利。",
+    trap: "陷阱：分擔同代位一樣，通常唔適用於人壽保險。題目成日混淆「分擔 vs 代位」。",
+    followup: [
+      "例子：你部車同時有公司車險同私人車險，撞車後兩間公司會按保額比例分擔修理費。",
+      "變形題：分擔原則可以被保單條款修改（例如「其他保險」條款）。但衡平法下的分擔仍然存在。"
+    ]
+  },
+  {
+    id: 7,
+    chapter: "代理人法",
+    question: "代理人的「表面權限」（Apparent Authority）是指：",
+    options: [
+      "委託人明確書面授權的權限",
+      "根據代理人職位或行為，使第三者合理相信其有權限的權限",
+      "代理人私下答應客戶的權限",
+      "只有總公司才有的權限"
+    ],
+    correct: 1,
+    explanation: "表面權限就係「睇落好似有權」。例如保險代理平時都簽單，客戶合理相信佢有權，就算公司內部冇明確授權，公司都可能要負責。",
+    mnemonic: "表面權限＝合理相信有權，公司要負責。",
+    trap: "陷阱：明示權限、默示權限、表面權限三樣要分清楚。表面權限係對第三者而言。",
+    followup: [
+      "例子：一個保險代理一直都有權批核小額保單，突然公司內部取消咗佢權限但冇通知客戶。客戶同佢簽單，公司仍然可能要負責。",
+      "變形題：代理人超越權限同客戶承諾額外保障，如果客戶合理相信，保險公司可能受約束。呢個係高頻考點。"
+    ]
+  },
+  {
+    id: 8,
+    chapter: "保監局 IA 監管",
+    question: "保險業監管局（IA）的主要職能不包括以下哪項？",
+    options: [
+      "向保險人及保險中介人發牌及監管",
+      "處理保險合約爭議的最終裁決（作為法院）",
+      "制定及執行操守守則",
+      "監督保險人的償付能力"
+    ],
+    correct: 1,
+    explanation: "保監局係監管機構，負責發牌、監察、紀律處分。但佢唔係法院，合約爭議要去保險投訴局（ICB）或者法院。",
+    mnemonic: "IA＝監管發牌。投訴爭議＝ICB 或法院。",
+    trap: "陷阱：唔好將保監局同保險投訴局搞亂。IA 唔處理個別索償爭議。",
+    followup: [
+      "例子：你覺得保險公司無理拒賠，應該去保險投訴局（ICB）投訴，而唔係直接去保監局告。保監局管嘅係公司有冇違規。",
+      "變形題：持牌中介人必須完成持續專業培訓（CPD），每年至少15小時（包括操守相關）。呢個係IA要求。"
+    ]
+  },
+  {
+    id: 9,
+    chapter: "最高誠信原則",
+    question: "以下哪項事實通常毋須向保險人主動披露？",
+    options: [
+      "投保人過去曾多次索償",
+      "法律事實或屬常識範圍的事實",
+      "會增加風險的重要事實",
+      "影響保費計算的事實"
+    ],
+    correct: 1,
+    explanation: "法律事實（例如法律規定）、常識（例如香港有颱風）、減低風險的事實、保險人應該知嘅專業知識，都唔使你主動講。",
+    mnemonic: "法律、常識、減風險、保險人應知——呢四樣唔使講。",
+    trap: "陷阱：題目成日問「必須披露」定「毋須披露」。記低四類毋須披露。",
+    followup: [
+      "例子：你唔使話俾保險公司知「香港有盜竊風險」，因為呢個係常識。但你要講自己屋企有冇特別防盜。",
+      "變形題：如果投保人故意隱瞞會增加風險嘅事實，就係違反最高誠信，保險人可以取消合約。"
+    ]
+  },
+  {
+    id: 10,
+    chapter: "可保權益",
+    question: "缺乏可保權益的保險合約會：",
+    options: [
+      "仍然有效，但保費較高",
+      "被視為無效（void），可能被當作賭博",
+      "自動轉為人壽保險",
+      "只需補交可保權益證明即可"
+    ],
+    correct: 1,
+    explanation: "冇可保權益就係賭博，合約無效。你唔可以幫一個完全冇關係嘅人買人壽，或者幫鄰居嘅車買保險。",
+    mnemonic: "冇可保權益＝無效合約＝賭博。",
+    trap: "陷阱：「無效 vs 可撤銷」。缺乏可保權益通常係自始無效。",
+    followup: [
+      "例子：你唔可以買你同事嘅人壽保險（除非有債務或其他法律認可關係），否則合約無效。",
+      "變形題：配偶之間被法律假定有可保權益，唔使另外證明財務損失。"
+    ]
+  },
+  {
+    id: 11,
+    chapter: "近因原則",
+    question: "如果損失由受保危險及除外危險共同造成，而近因是除外危險，結果是：",
+    options: [
+      "全額賠償",
+      "按比例賠償",
+      "不予賠償",
+      "只賠受保部分"
+    ],
+    correct: 2,
+    explanation: "近因係除外危險，就算有受保危險同時存在，保險人都唔使賠。關鍵係邊個係主導原因。",
+    mnemonic: "近因除外＝唔賠。",
+    trap: "陷阱：唔好以為「有受保危險就賠」。要睇近因係邊個。",
+    followup: [
+      "例子：保單除外「戰爭」，但火災係受保。如果近因係戰爭引起嘅火災，通常唔賠。",
+      "變形題：有啲保單會用「近因條款」修改普通法規則，要仔細睇條款。"
+    ]
+  },
+  {
+    id: 12,
+    chapter: "彌償原則",
+    question: "不足額保險（Under-insurance）下，平均分攤（Average）的作用是：",
+    options: [
+      "保險人全額賠償",
+      "按投保額與實際價值的比例減少賠償",
+      "被保險人可以選擇不賠",
+      "只適用於人壽保險"
+    ],
+    correct: 1,
+    explanation: "如果你部車值10萬但只保5萬，出事先，保險公司只會按比例賠（例如損失4萬只賠2萬）。呢個就係平均分攤，防止你故意買少保額。",
+    mnemonic: "不足額＝按比例賠（平均分攤）。",
+    trap: "陷阱：平均分攤係彌償原則嘅應用。人壽保險冇呢樣嘢。",
+    followup: [
+      "例子：屋值200萬，只保100萬。火災損失80萬，保險公司只賠40萬（100/200 × 80）。",
+      "變形題：有啲保單有「85%平均條款」，即係如果保額達到實際價值85%以上，就唔使按比例扣減。"
+    ]
+  },
+  {
+    id: 13,
+    chapter: "代理人法",
+    question: "保險代理人對委託人（保險公司）的責任包括：",
+    options: [
+      "可以將客戶資料賣俾其他公司",
+      "必須對委託人忠誠，並披露所有重要資料",
+      "可以私下收取客戶回佣而不披露",
+      "只需要完成銷售目標即可"
+    ],
+    correct: 1,
+    explanation: "代理人必須對委託人忠誠（fiduciary duty），唔可以有利益衝突，要披露所有重要嘢。私下收錢唔講就係違規。",
+    mnemonic: "代理人要忠誠，利益衝突要披露。",
+    trap: "陷阱：代理人代表保險公司，經紀代表客戶。兩者責任唔同。",
+    followup: [
+      "例子：代理發現客戶有高風險但隱瞞唔講俾公司知，就違反對委託人嘅責任。",
+      "變形題：持牌保險代理最多可以代表4間保險公司（長期業務最多2間），呢個係IA規定。"
+    ]
+  },
+  {
+    id: 14,
+    chapter: "保監局 IA 監管",
+    question: "關於保險中介人牌照，以下哪項正確？",
+    options: [
+      "任何人都可以銷售保險，毋須牌照",
+      "必須通過IIQE並向保監局申請牌照，方可從事受規管活動",
+      "牌照由保險公司自行發出",
+      "只有經紀需要牌照，代理不需要"
+    ],
+    correct: 1,
+    explanation: "香港賣保險一定要持牌。IIQE係資格考試，過咗再向IA申請牌照。無牌賣保險係違法。",
+    mnemonic: "IIQE過關 + IA發牌 = 可以賣保險。",
+    trap: "陷阱：代理同經紀都要牌照，只係代表對象唔同。",
+    followup: [
+      "例子：你朋友介紹你買保險，但佢冇牌，你應該拒絕，因為無牌銷售不受監管保障。",
+      "變形題：消費者可以去IA網站嘅「持牌保險中介人登記冊」查對方有冇牌。"
+    ]
+  },
+  {
+    id: 15,
+    chapter: "分擔與代位權",
+    question: "分擔（Contribution）與代位（Subrogation）的主要分別是：",
+    options: [
+      "兩者完全相同",
+      "分擔是多個保險人之間分擔同一損失；代位是保險人向有責第三者追償",
+      "代位適用於人壽，分擔不適用",
+      "分擔只在索償前發生"
+    ],
+    correct: 1,
+    explanation: "分擔：幾間保險公司一齊分一單損失。代位：保險公司賠完你之後，去追搞出事嗰個人。兩者都係防止你賺到，但對象唔同。",
+    mnemonic: "分擔＝保險公司之間。代位＝追第三者。",
+    trap: "陷阱：兩者都唔適用於純人壽保險（因為人壽唔係彌償）。考官最愛問呢個。",
+    followup: [
+      "例子：分擔好似兩間保險公司分修理費。代位好似保險公司追肇事司機。",
+      "變形題：如果被保險人放棄向第三者追償的權利，可能影響保險人的代位權，甚至影響索償。"
+    ]
+  }
+];
+
+const bibleData = [
+  {
+    title: "最高誠信原則",
+    essence: "主動講晒所有重要事實，唔等保險公司問。",
+    types: "適用所有保險（人壽同一般保險都要）。",
+    trap: "必須 vs 可以；主動披露 vs 問先答。違反可以令合約由頭取消。"
+  },
+  {
+    title: "可保權益",
+    essence: "你同保險標的要有法律認可嘅財務利害關係。",
+    types: "人壽：投保時有就得。一般保險（財產）：投保及索償時都要有。",
+    trap: "盜賊冇可保權益。配偶被假定有。缺乏即無效。"
+  },
+  {
+    title: "近因原則",
+    essence: "搵出主導損失嘅有效原因，唔係時間上最後嗰個。",
+    types: "適用所有保險。近因係除外危險就唔賠。",
+    trap: "最後發生 ≠ 近因。要睇因果鏈有冇中斷。"
+  },
+  {
+    title: "彌償原則",
+    essence: "賠返你實際損失，唔可以藉保險賺錢。",
+    types: "主要適用一般保險（財產、責任）。人壽同個人意外通常係定額給付，唔適用彌償。",
+    trap: "所有保單 vs 彌償保單。醫療費用通常係彌償。"
+  },
+  {
+    title: "代位權",
+    essence: "保險公司賠咗你之後，可以代替你去追有責第三者。",
+    types: "只適用彌償保單。人壽保險不適用。",
+    trap: "必須先作出彌償先有代位權。防止雙重獲利。"
+  },
+  {
+    title: "代理人權限",
+    essence: "代理人有明示、默示、表面三種權限。表面權限令第三者合理相信。",
+    types: "代理代表保險公司；經紀代表客戶。兩者都要對委託人忠誠。",
+    trap: "表面權限可以令保險公司受約束，即使內部冇授權。"
+  }
+];
+
+// ============ State ============
+let currentQ = 0;
+let answers = new Array(questions.length).fill(null);
+let wrongSet = new Set();
+let isPro = false;
+let timerSeconds = 120 * 60; // 2 hours
+let timerInterval = null;
+let isRetryMode = false;
+let retryQuestions = [];
+let currentRetryIndex = 0;
+
+// ============ Init ============
+function init() {
+  renderQuestion();
+  renderBible();
+  startTimer();
+  updateWrongTab();
+}
+
+function startTimer() {
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    if (timerSeconds > 0) {
+      timerSeconds--;
+      updateTimerDisplay();
+    } else {
+      clearInterval(timerInterval);
+      alert("模擬考試時間到！");
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+  const m = Math.floor((timerSeconds % 3600) / 60).toString().padStart(2, '0');
+  const s = (timerSeconds % 60).toString().padStart(2, '0');
+  document.getElementById('timerDisplay').textContent = `${h}:${m}:${s}`;
+}
+
+function renderQuestion() {
+  const qList = isRetryMode ? retryQuestions : questions;
+  const idx = isRetryMode ? currentRetryIndex : currentQ;
+  if (idx >= qList.length) {
+    showComplete();
+    return;
+  }
+  const q = qList[idx];
+  document.getElementById('chapterTag').textContent = q.chapter;
+  document.getElementById('questionText').textContent = q.question;
+  document.getElementById('progressText').textContent = `第 ${idx + 1} / ${qList.length} 題`;
+  document.getElementById('progressFill').style.width = `${((idx + 1) / qList.length) * 100}%`;
+
+  const container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+  const selected = isRetryMode ? null : answers[currentQ];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn w-full text-left p-3 rounded-xl text-sm';
+    btn.textContent = `${String.fromCharCode(65 + i)}. ${opt}`;
+    btn.onclick = () => selectOption(i, q, btn);
+    if (selected !== null) {
+      if (i === q.correct) btn.classList.add('correct');
+      else if (i === selected) btn.classList.add('wrong');
+      btn.disabled = true;
+    }
+    container.appendChild(btn);
+  });
+
+  // Explanation
+  const expCard = document.getElementById('explanationCard');
+  const aiFollow = document.getElementById('aiFollowup');
+  if (selected !== null || isRetryMode) {
+    // show if answered
+  } else {
+    expCard.classList.add('hidden');
+    aiFollow.classList.add('hidden');
+    document.getElementById('chatContainer').classList.add('hidden');
+    document.getElementById('aiResponseArea').innerHTML = '';
+  }
+  if (!isRetryMode && answers[currentQ] !== null) {
+    showExplanation(q, answers[currentQ] === q.correct);
+  }
+}
+
+function selectOption(selectedIdx, q, btn) {
+  if (!isRetryMode && answers[currentQ] !== null) return;
+  const isCorrect = selectedIdx === q.correct;
+  if (!isRetryMode) {
+    answers[currentQ] = selectedIdx;
+    if (!isCorrect) wrongSet.add(currentQ);
+  } else {
+    if (isCorrect) {
+      // remove from wrong if correct in retry
+      const origIdx = questions.findIndex(qq => qq.id === q.id);
+      if (origIdx !== -1) wrongSet.delete(origIdx);
+    }
+  }
+
+  // Visual feedback
+  const buttons = document.querySelectorAll('#optionsContainer .option-btn');
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    if (i === q.correct) b.classList.add('correct');
+    else if (i === selectedIdx && !isCorrect) b.classList.add('wrong');
+  });
+
+  showExplanation(q, isCorrect);
+  updateWrongTab();
+}
+
+function showExplanation(q, isCorrect) {
+  document.getElementById('explanationText').textContent = q.explanation;
+  document.getElementById('mnemonicText').textContent = q.mnemonic;
+  document.getElementById('trapText').textContent = q.trap;
+  document.getElementById('explanationCard').classList.remove('hidden');
+  document.getElementById('aiFollowup').classList.remove('hidden');
+}
+
+function nextQuestion() {
+  const qList = isRetryMode ? retryQuestions : questions;
+  const idx = isRetryMode ? currentRetryIndex : currentQ;
+  if (idx < qList.length - 1) {
+    if (isRetryMode) currentRetryIndex++;
+    else currentQ++;
+    renderQuestion();
+    // reset explanation visibility until answered
+    if ((!isRetryMode && answers[currentQ] === null) || isRetryMode) {
+      document.getElementById('explanationCard').classList.add('hidden');
+      document.getElementById('aiFollowup').classList.add('hidden');
+    }
+  } else {
+    if (isRetryMode) {
+      alert("錯題重練完成！返回正常模式。");
+      isRetryMode = false;
+      currentQ = 0;
+      switchTab('practice');
+      renderQuestion();
+    } else {
+      alert("15題練習完成！去錯題救星睇下弱項啦。");
+    }
+  }
+}
+
+function prevQuestion() {
+  if (isRetryMode) {
+    if (currentRetryIndex > 0) {
+      currentRetryIndex--;
+      renderQuestion();
+    }
+  } else if (currentQ > 0) {
+    currentQ--;
+    renderQuestion();
+  }
+}
+
+function handleQuickAsk(type) {
+  const qList = isRetryMode ? retryQuestions : questions;
+  const idx = isRetryMode ? currentRetryIndex : currentQ;
+  const q = qList[idx];
+  const area = document.getElementById('aiResponseArea');
+  const replies = q.followup || ["AI導師：呢個原則記住「主動、誠實、完整」就得。", "再試一題類似嘅：如果漏報重要事實，保險人可以由頭取消合約。"];
+  const reply = replies[type] || replies[0];
+  area.innerHTML = `<div class="ai-reply"><strong>AI 導師：</strong> ${reply}</div>`;
+  document.getElementById('chatContainer').classList.remove('hidden');
+}
+
+document.getElementById('askAiBtn').onclick = function() {
+  document.getElementById('chatContainer').classList.toggle('hidden');
+};
+
+// Bible
+function renderBible() {
+  const container = document.getElementById('bibleCards');
+  container.innerHTML = bibleData.map((item, i) => `
+    <div class="card expand-card p-4" onclick="this.classList.toggle('open')">
+      <div class="flex justify-between items-center">
+        <div class="font-bold">${item.title}</div>
+        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="expand-content mt-3 text-sm space-y-2">
+        <div><span class="text-[#10B981] font-medium">廣東話一句話精髓：</span>${item.essence}</div>
+        <div><span class="text-[#D97706] font-medium">適用保單類型：</span>${item.types}</div>
+        <div><span class="text-red-400 font-medium">高頻中伏位：</span>${item.trap}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Wrong answers
+function updateWrongTab() {
+  const count = wrongSet.size;
+  document.getElementById('wrongCount').textContent = count;
+  document.getElementById('retryWrongBtn').classList.toggle('hidden', count === 0);
+  document.getElementById('noWrong').classList.toggle('hidden', count > 0);
+
+  // Weak analysis
+  const chapterCount = {};
+  wrongSet.forEach(idx => {
+    const ch = questions[idx].chapter;
+    chapterCount[ch] = (chapterCount[ch] || 0) + 1;
+  });
+  let analysis = "暫時未有錯題，加油！";
+  if (count > 0) {
+    const sorted = Object.entries(chapterCount).sort((a,b) => b[1] - a[1]);
+    analysis = `你在「${sorted[0][0]}」錯誤率較高（${sorted[0][1]}題）。建議重點重溫呢個章節。`;
+    if (sorted.length > 1) analysis += ` 其次係「${sorted[1][0]}」。`;
+  }
+  document.getElementById('weakAnalysis').textContent = analysis;
+
+  // List
+  const list = document.getElementById('wrongList');
+  list.innerHTML = '';
+  Array.from(wrongSet).forEach(idx => {
+    const q = questions[idx];
+    const div = document.createElement('div');
+    div.className = 'card p-3 text-sm';
+    div.innerHTML = `<div class="text-xs text-slate-400">${q.chapter}</div><div class="mt-1">${q.question.substring(0, 60)}...</div>`;
+    list.appendChild(div);
+  });
+}
+
+function startRetryWrong() {
+  if (wrongSet.size === 0) return;
+  retryQuestions = Array.from(wrongSet).map(idx => questions[idx]);
+  isRetryMode = true;
+  currentRetryIndex = 0;
+  switchTab('practice');
+  renderQuestion();
+  alert(`開始重練 ${retryQuestions.length} 條錯題！答對就會從錯題簿移除。`);
+}
+
+// Tabs
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  if (tab === 'wrong') updateWrongTab();
+  if (tab === 'practice' && !isRetryMode) {
+    // refresh
+  }
+}
+
+// PRO
+function unlockPro() {
+  isPro = true;
+  document.getElementById('proStatus').className = 'pro-badge';
+  document.getElementById('proStatus').textContent = 'PRO 尊貴會員';
+  document.getElementById('successModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('successModal').classList.add('hidden');
+  switchTab('practice');
+}
+
+function showComplete() {
+  document.getElementById('questionCard').innerHTML = '<div class="text-center py-10"><div class="text-4xl mb-4">🎉</div><div class="text-xl font-bold">練習完成！</div><div class="text-sm text-slate-400 mt-2">去錯題救星複習弱項吧</div></div>';
+  document.getElementById('explanationCard').classList.add('hidden');
+  document.getElementById('aiFollowup').classList.add('hidden');
+}
+
+// Start
+init();
+
+// ============ PWA Install ============
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show a small install banner if wanted
+  console.log('PWA installable');
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.log('SW failed', err));
+  });
+}
+
+// Optional: manual install button logic can be added later
+</script>
+</body>
+</html>
